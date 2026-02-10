@@ -1,22 +1,35 @@
-import os
-import anthropic
+name: Run Claude Agent
 
-api_key = os.environ.get("ANTHROPIC_API_KEY")
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
-if not api_key:
-    raise RuntimeError("ANTHROPIC_API_KEY is not set")
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
 
-client = anthropic.Anthropic(api_key=api_key)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-message = client.messages.create(
-    model="claude-3-5-sonnet-20241022",
-    max_tokens=200,
-    messages=[
-        {
-            "role": "user",
-            "content": "Say hello from Claude"
-        }
-    ]
-)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-print(message.content[0].text)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip uninstall anthropic -y || true
+          pip install anthropic
+
+      - name: Run agent script
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ CLAUDE_API_KEY secret is not set"
+            exit 1
+          fi
+          python scripts/run_agent.py
