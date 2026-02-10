@@ -1,28 +1,19 @@
-name: Claude API Check
+import os
+from anthropic import Anthropic
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
+api_key = os.getenv("ANTHROPIC_API_KEY")
 
-jobs:
-  check-api-key:
-    runs-on: ubuntu-latest
+if not api_key:
+    raise RuntimeError("ANTHROPIC_API_KEY is not set")
 
-    env:
-      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+client = Anthropic(api_key=api_key)
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+response = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=200,
+    messages=[
+        {"role": "user", "content": "Say hello from Claude"}
+    ]
+)
 
-      - name: Verify Claude API key
-        run: |
-          if [ -z "$CLAUDE_API_KEY" ]; then
-            echo "❌ Error: CLAUDE_API_KEY secret is not set in repository secrets."
-            echo "👉 Please add your Anthropic API key as a repository secret named 'CLAUDE_API_KEY'."
-            echo "👉 Go to: Settings > Secrets and variables > Actions > New repository secret"
-            exit 1
-          fi
-
-          echo "✅ CLAUDE_API_KEY is set"
+print(response.content[0].text)
